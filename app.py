@@ -1,9 +1,6 @@
-import streamlit as st
-import re
-
-st.title("Lotto Parser")
-
 def parse_order(text):
+    import re
+
     data = {}
 
     for line in text.split("\n"):
@@ -20,30 +17,41 @@ def parse_order(text):
         if n not in data:
             data[n] = {"บน": 0, "ล่าง": 0, "โต๊ด": 0}
 
-        nums = re.findall(r"\d+", line)
-        if len(nums) < 2:
+        # 🔥 FIX CORE: handle * properly
+        price_part = re.findall(r"\d+(?:\*\d+)*", line)
+        if not price_part:
             continue
 
-        price = int(nums[-1])  # 🔥 FIX: ใช้ตัวท้ายสุดเท่านั้น (stable)
+        raw = price_part[-1]
 
-        # 🔥 PRIORITY RULE (สำคัญสุด)
+        if "*" in raw:
+            p = [int(x) for x in raw.split("*")]
+        else:
+            p = [int(raw)]
+
+        # 🔥 TAG priority
         if "โต๊ด" in line:
-            data[n]["โต๊ด"] += price
+            data[n]["โต๊ด"] += p[0]
 
         elif "บนล่าง" in line or "บน-ล่าง" in line:
-            data[n]["บน"] += price
-            data[n]["ล่าง"] += price
+            if len(p) == 2:
+                data[n]["บน"] += p[0]
+                data[n]["ล่าง"] += p[1]
+            continue
 
         elif "ล่าง" in line:
-            data[n]["ล่าง"] += price
+            data[n]["ล่าง"] += p[0]
 
         else:
-            data[n]["บน"] += price
+            # 🔥 FIX HERE (IMPORTANT)
+            if len(p) == 1:
+                data[n]["บน"] += p[0]
+            elif len(p) == 2:
+                data[n]["บน"] += p[0]
+                data[n]["ล่าง"] += p[1]
+            elif len(p) == 3:
+                data[n]["บน"] += p[0]
+                data[n]["ล่าง"] += p[1]
+                data[n]["โต๊ด"] += p[2]
 
     return [f"{k} {v['บน']} {v['ล่าง']} {v['โต๊ด']}" for k, v in data.items()]
-
-
-text = st.text_area("วางโพยที่นี่")
-
-if st.button("Parse"):
-    st.text_area("Output", "\n".join(parse_order(text)), height=300)
