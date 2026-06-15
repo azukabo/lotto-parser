@@ -7,6 +7,7 @@ st.title("Lotto Parser")
 
 def parse_order(text):
     results = []
+    seen = set()  # 🔥 กันซ้ำ
 
     for line in text.split("\n"):
         line = line.strip()
@@ -17,28 +18,30 @@ def parse_order(text):
         is_toe = "โต๊ด" in line
         is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
 
-        # 💰 ราคา
-        price_match = re.findall(r"\d+(?:\*\d+)+|\d+", line)
+        # 💰 price
+        price_match = re.findall(r"\d+(?:\*\d+)*", line)
         price = None
 
         if price_match:
             last = price_match[-1]
             if "*" in last:
                 price = [int(x) for x in last.split("*")]
-            elif last.isdigit() and len(last) > 1:
+            else:
                 price = [int(last)]
 
-        # 🎯 เลขแทง = เอา "ตัวแรกของบรรทัด" เท่านั้น
-        first_numbers = re.findall(r"^\s*(\d{1,3})", line)
-        if not first_numbers:
+        # 🎯 number = ตัวแรกของบรรทัดเท่านั้น
+        m = re.match(r"^\s*(\d{1,3})", line)
+        if not m or not price:
             continue
 
-        n = first_numbers[0]
+        n = m.group(1)
 
-        if not price:
+        key = (n, tuple(price), is_lower, is_toe, is_onoff)
+        if key in seen:
             continue
+        seen.add(key)
 
-        # logic mapping
+        # mapping
         if len(price) == 1:
             results.append(f"{n} {price[0]} 0 0")
 
@@ -65,10 +68,10 @@ text = st.text_area("วางโพยที่นี่")
 if st.button("Parse"):
     result = parse_order(text)
 
+    st.subheader("ผลลัพธ์")
+
     if result:
         output_text = "\n".join(result)
-
-        st.subheader("ผลลัพธ์")
 
         st.text_area("Output", output_text, height=250)
 
