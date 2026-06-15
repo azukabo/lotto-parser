@@ -61,5 +61,23 @@ if st.button("Parse"):
     if not result:
         st.warning("ไม่มีข้อมูลที่ parse ได้")
     else:
-        for r in result:
-            st.write(r)
+        st.subheader("ผลลัพธ์")
+
+if result:
+    output_text = "\n".join(result)
+
+    # แสดงแบบ text copy ได้
+    st.text_area("Copy ได้เลย", output_text, height=200)
+
+    # ปุ่ม copy (Streamlit native)
+    st.code(output_text)
+
+    # optional: ปุ่ม download
+    st.download_button(
+        label="Download TXT",
+        data=output_text,
+        file_name="result.txt",
+        mime="text/plain"
+    )
+else:
+    st.warning("ไม่มีข้อมูลที่ parse ได้")
