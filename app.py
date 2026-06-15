@@ -4,7 +4,7 @@ import re
 st.title("Lotto Parser")
 
 def parse_order(text):
-    results = []
+    data = {}
 
     for line in text.split("\n"):
         line = line.strip()
@@ -17,29 +17,30 @@ def parse_order(text):
 
         n = m.group(1)
 
-        nums = re.findall(r"\d+", line)
+        if n not in data:
+            data[n] = {"บน": 0, "ล่าง": 0, "โต๊ด": 0}
 
-        # กัน crash
+        nums = re.findall(r"\d+", line)
         if len(nums) < 2:
             continue
 
-        price = nums[1:]
+        price = int(nums[-1])  # 🔥 FIX: ใช้ตัวท้ายสุดเท่านั้น (stable)
 
-        # convert safe
-        try:
-            price = [int(x) for x in price]
-        except:
-            continue
+        # 🔥 PRIORITY RULE (สำคัญสุด)
+        if "โต๊ด" in line:
+            data[n]["โต๊ด"] += price
 
-        # safe output only (ยังไม่ logic ซับซ้อน)
-        if len(price) == 1:
-            results.append(f"{n} {price[0]} 0 0")
-        elif len(price) == 2:
-            results.append(f"{n} {price[0]} {price[1]} 0")
-        elif len(price) == 3:
-            results.append(f"{n} {price[0]} {price[1]} {price[2]}")
+        elif "บนล่าง" in line or "บน-ล่าง" in line:
+            data[n]["บน"] += price
+            data[n]["ล่าง"] += price
 
-    return results
+        elif "ล่าง" in line:
+            data[n]["ล่าง"] += price
+
+        else:
+            data[n]["บน"] += price
+
+    return [f"{k} {v['บน']} {v['ล่าง']} {v['โต๊ด']}" for k, v in data.items()]
 
 
 text = st.text_area("วางโพยที่นี่")
