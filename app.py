@@ -3,7 +3,6 @@ import re
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Lotto Parser", layout="centered")
-
 st.title("Lotto Parser")
 
 def parse_order(text):
@@ -18,35 +17,45 @@ def parse_order(text):
         is_toe = "โต๊ด" in line
         is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
 
-        price = []
-        price_match = re.findall(r"\d+(?:\*\d+)*", line)
+        # 💰 ราคา
+        price_match = re.findall(r"\d+(?:\*\d+)+|\d+", line)
+        price = None
+
         if price_match:
-            price = [int(x) for x in price_match[-1].split("*")]
+            last = price_match[-1]
+            if "*" in last:
+                price = [int(x) for x in last.split("*")]
+            elif last.isdigit() and len(last) > 1:
+                price = [int(last)]
 
-        numbers = re.findall(r"\b\d{1,3}\b", line)
-        numbers = [n for n in numbers if len(n) <= 3]
-
-        if not price or not numbers:
+        # 🎯 เลขแทง = เอา "ตัวแรกของบรรทัด" เท่านั้น
+        first_numbers = re.findall(r"^\s*(\d{1,3})", line)
+        if not first_numbers:
             continue
 
-        for n in numbers:
-            if len(price) == 1:
-                results.append(f"{n} {price[0]} 0 0")
+        n = first_numbers[0]
 
-            elif len(price) == 2:
-                if is_lower and is_toe:
-                    results.append(f"{n} 0 {price[0]} {price[1]}")
-                elif is_onoff:
-                    results.append(f"{n} {price[0]} {price[1]} 0")
-                elif is_lower:
-                    results.append(f"{n} 0 {price[0]} 0")
-                elif is_toe:
-                    results.append(f"{n} {price[0]} 0 {price[1]}")
-                else:
-                    results.append(f"{n} {price[0]} {price[1]} 0")
+        if not price:
+            continue
 
-            elif len(price) == 3:
-                results.append(f"{n} {price[0]} {price[1]} {price[2]}")
+        # logic mapping
+        if len(price) == 1:
+            results.append(f"{n} {price[0]} 0 0")
+
+        elif len(price) == 2:
+            if is_lower and is_toe:
+                results.append(f"{n} 0 {price[0]} {price[1]}")
+            elif is_onoff:
+                results.append(f"{n} {price[0]} {price[1]} 0")
+            elif is_lower:
+                results.append(f"{n} 0 {price[0]} 0")
+            elif is_toe:
+                results.append(f"{n} {price[0]} 0 {price[1]}")
+            else:
+                results.append(f"{n} {price[0]} {price[1]} 0")
+
+        elif len(price) == 3:
+            results.append(f"{n} {price[0]} {price[1]} {price[2]}")
 
     return results
 
@@ -63,11 +72,10 @@ if st.button("Parse"):
 
         st.text_area("Output", output_text, height=250)
 
-        # 🔥 COPY BUTTON (JS)
         copy_html = f"""
-        <button onclick="navigator.clipboard.writeText(`{output_text}`)" 
+        <button onclick="navigator.clipboard.writeText(`{output_text}`)"
         style="padding:10px 20px;font-size:16px;">
-        📋 Copy to Clipboard
+        📋 Copy
         </button>
         """
 
