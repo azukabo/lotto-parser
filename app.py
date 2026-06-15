@@ -1,6 +1,8 @@
 import streamlit as st
 import re
 
+st.set_page_config(page_title="Lotto Parser", layout="centered")
+
 st.title("Lotto Parser")
 
 def parse_order(text):
@@ -14,15 +16,16 @@ def parse_order(text):
         is_lower = "ล่าง" in line
         is_toe = "โต๊ด" in line
         is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
+        is_full = "บนล่างโต๊ด" in line
 
-        # price ดึงทุกแบบ 100*50 / 100 / 100*100*100
+        # ดึงราคา (100*50 / 100 / 100*100*100)
         price = []
-        m = re.findall(r"\d+(?:\*\d+)*", line)
-        if m:
-            parts = m[-1].split("*")
+        price_match = re.findall(r"\d+(?:\*\d+)*", line)
+        if price_match:
+            parts = price_match[-1].split("*")
             price = [int(x) for x in parts]
 
-        # numbers = เลข 2-3 ตัว
+        # ดึงเลข 2-3 ตัว
         numbers = re.findall(r"\b\d{1,3}\b", line)
         numbers = [n for n in numbers if len(n) <= 3]
 
@@ -30,6 +33,7 @@ def parse_order(text):
             continue
 
         for n in numbers:
+
             if len(price) == 1:
                 results.append(f"{n} {price[0]} 0 0")
 
@@ -51,33 +55,24 @@ def parse_order(text):
     return results
 
 
-text = st.text_area("วางโพยที่นี่")
+text = st.text_area("วางโพยที่นี่ (จาก LINE ได้เลย)")
 
 if st.button("Parse"):
     result = parse_order(text)
 
     st.subheader("ผลลัพธ์")
 
-    if not result:
-        st.warning("ไม่มีข้อมูลที่ parse ได้")
+    if result:
+        output_text = "\n".join(result)
+
+        st.text_area("📋 Copy ได้เลย", output_text, height=250)
+
+        st.download_button(
+            label="⬇️ Download TXT",
+            data=output_text,
+            file_name="lotto_result.txt",
+            mime="text/plain"
+        )
+
     else:
-        st.subheader("ผลลัพธ์")
-
-if result:
-    output_text = "\n".join(result)
-
-    # แสดงแบบ text copy ได้
-    st.text_area("Copy ได้เลย", output_text, height=200)
-
-    # ปุ่ม copy (Streamlit native)
-    st.code(output_text)
-
-    # optional: ปุ่ม download
-    st.download_button(
-        label="Download TXT",
-        data=output_text,
-        file_name="result.txt",
-        mime="text/plain"
-    )
-else:
-    st.warning("ไม่มีข้อมูลที่ parse ได้")
+        st.warning("ไม่มีข้อมูลที่ parse ได้")
