@@ -1,13 +1,6 @@
-import streamlit as st
-import re
-import streamlit.components.v1 as components
-
-st.set_page_config(page_title="Lotto Parser", layout="centered")
-st.title("Lotto Parser")
-
 def parse_order(text):
     results = []
-    seen = set()  # 🔥 กันซ้ำ
+    seen = set()
 
     for line in text.split("\n"):
         line = line.strip()
@@ -18,30 +11,25 @@ def parse_order(text):
         is_toe = "โต๊ด" in line
         is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
 
-        # 💰 price
         price_match = re.findall(r"\d+(?:\*\d+)*", line)
-        price = None
+        if not price_match:
+            continue
 
-        if price_match:
-            last = price_match[-1]
-            if "*" in last:
-                price = [int(x) for x in last.split("*")]
-            else:
-                price = [int(last)]
+        last = price_match[-1]
+        price = [int(x) for x in last.split("*")] if "*" in last else [int(last)]
 
-        # 🎯 number = ตัวแรกของบรรทัดเท่านั้น
         m = re.match(r"^\s*(\d{1,3})", line)
-        if not m or not price:
+        if not m:
             continue
 
         n = m.group(1)
 
+        # 🔥 dedupe key (สำคัญ)
         key = (n, tuple(price), is_lower, is_toe, is_onoff)
         if key in seen:
             continue
         seen.add(key)
 
-        # mapping
         if len(price) == 1:
             results.append(f"{n} {price[0]} 0 0")
 
@@ -61,28 +49,3 @@ def parse_order(text):
             results.append(f"{n} {price[0]} {price[1]} {price[2]}")
 
     return results
-
-
-text = st.text_area("วางโพยที่นี่")
-
-if st.button("Parse"):
-    result = parse_order(text)
-
-    st.subheader("ผลลัพธ์")
-
-    if result:
-        output_text = "\n".join(result)
-
-        st.text_area("Output", output_text, height=250)
-
-        copy_html = f"""
-        <button onclick="navigator.clipboard.writeText(`{output_text}`)"
-        style="padding:10px 20px;font-size:16px;">
-        📋 Copy
-        </button>
-        """
-
-        components.html(copy_html, height=60)
-
-    else:
-        st.warning("ไม่มีข้อมูลที่ parse ได้")
