@@ -11,28 +11,40 @@ def parse_order(text):
         if not line:
             continue
 
-        tokens = line.split()
+        is_lower = "ล่าง" in line
+        is_toe = "โต๊ด" in line
+        is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
 
-        numbers = []
+        # price ดึงทุกแบบ 100*50 / 100 / 100*100*100
         price = []
+        m = re.findall(r"\d+(?:\*\d+)*", line)
+        if m:
+            parts = m[-1].split("*")
+            price = [int(x) for x in parts]
 
-        for t in tokens:
-            if t.isdigit() and len(t) <= 3:
-                numbers.append(t)
-            elif "*" in t:
-                price = [int(x) for x in t.split("*")]
-            elif t.isdigit() and len(t) > 3:
-                # เผื่อ case 100200
-                price = [int(t)]
+        # numbers = เลข 2-3 ตัว
+        numbers = re.findall(r"\b\d{1,3}\b", line)
+        numbers = [n for n in numbers if len(n) <= 3]
 
-        if not numbers or not price:
+        if not price or not numbers:
             continue
 
         for n in numbers:
             if len(price) == 1:
                 results.append(f"{n} {price[0]} 0 0")
+
             elif len(price) == 2:
-                results.append(f"{n} {price[0]} {price[1]} 0")
+                if is_lower and is_toe:
+                    results.append(f"{n} 0 {price[0]} {price[1]}")
+                elif is_onoff:
+                    results.append(f"{n} {price[0]} {price[1]} 0")
+                elif is_lower:
+                    results.append(f"{n} 0 {price[0]} 0")
+                elif is_toe:
+                    results.append(f"{n} {price[0]} 0 {price[1]}")
+                else:
+                    results.append(f"{n} {price[0]} {price[1]} 0")
+
             elif len(price) == 3:
                 results.append(f"{n} {price[0]} {price[1]} {price[2]}")
 
@@ -51,4 +63,3 @@ if st.button("Parse"):
     else:
         for r in result:
             st.write(r)
-
