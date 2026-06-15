@@ -1,55 +1,48 @@
+import streamlit as st
 import re
-from collections import defaultdict
+
+st.title("Lotto Parser")
 
 def parse_order(text):
-    data = defaultdict(lambda: {"บน": 0, "ล่าง": 0, "โต๊ด": 0})
+    results = []
 
     for line in text.split("\n"):
         line = line.strip()
         if not line:
             continue
 
-        # 🔥 1. extract number
         m = re.match(r"^(\d{1,3})", line)
         if not m:
             continue
+
         n = m.group(1)
 
-        # 🔥 2. extract price ONLY from * pattern OR last numbers
-        if "*" in line:
-            nums = [int(x) for x in re.findall(r"\d+", line)]
-            # skip first number (id)
-            price = nums[1:]
-        else:
-            # เอาเฉพาะเลขท้ายสุด ไม่เอาทั้งบรรทัด
-            price = [int(x) for x in re.findall(r"\d+", line) if x != n]
+        nums = re.findall(r"\d+", line)
 
-        is_lower = "ล่าง" in line
-        is_toe = "โต๊ด" in line
+        # กัน crash
+        if len(nums) < 2:
+            continue
 
-        # 🔥 3. MAP STRICTLY PER LINE (ห้าม aggregate ผิด channel)
+        price = nums[1:]
+
+        # convert safe
+        try:
+            price = [int(x) for x in price]
+        except:
+            continue
+
+        # safe output only (ยังไม่ logic ซับซ้อน)
         if len(price) == 1:
-            if is_toe:
-                data[n]["โต๊ด"] += price[0]
-            elif is_lower:
-                data[n]["ล่าง"] += price[0]
-            else:
-                data[n]["บน"] += price[0]
-
+            results.append(f"{n} {price[0]} 0 0")
         elif len(price) == 2:
-            if "บนล่าง" in line or "บน-ล่าง" in line:
-                data[n]["บน"] += price[0]
-                data[n]["ล่าง"] += price[1]
-            elif is_lower and is_toe:
-                data[n]["ล่าง"] += price[0]
-                data[n]["โต๊ด"] += price[1]
-            else:
-                data[n]["บน"] += price[0]
-                data[n]["ล่าง"] += price[1]
-
+            results.append(f"{n} {price[0]} {price[1]} 0")
         elif len(price) == 3:
-            data[n]["บน"] += price[0]
-            data[n]["ล่าง"] += price[1]
-            data[n]["โต๊ด"] += price[2]
+            results.append(f"{n} {price[0]} {price[1]} {price[2]}")
 
-    return [f"{k} {v['บน']} {v['ล่าง']} {v['โต๊ด']}" for k, v in data.items()]
+    return results
+
+
+text = st.text_area("วางโพยที่นี่")
+
+if st.button("Parse"):
+    st.text_area("Output", "\n".join(parse_order(text)), height=300)
