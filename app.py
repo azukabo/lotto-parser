@@ -11,39 +11,30 @@ def parse_order(text):
         if not line:
             continue
 
-        # หา price เช่น 100*100 หรือ 200*200*200
-        price_match = re.findall(r"\d+\*\d+(?:\*\d+)?", line)
-        if not price_match:
+        tokens = line.split()
+
+        numbers = []
+        price = []
+
+        for t in tokens:
+            if t.isdigit() and len(t) <= 3:
+                numbers.append(t)
+            elif "*" in t:
+                price = [int(x) for x in t.split("*")]
+            elif t.isdigit() and len(t) > 3:
+                # เผื่อ case 100200
+                price = [int(t)]
+
+        if not numbers or not price:
             continue
 
-        price = [int(x) for x in price_match[0].split("*")]
-
-        tokens = line.split()
-        numbers = [t for t in tokens if t.isdigit() and len(t) <= 3]
-
-        is_lower = "ล่าง" in line
-        is_toe = "โต๊ด" in line
-        is_onoff = any(x in line for x in ["บนล่าง", "บน-ล่าง", "บน/ล่าง", "บน+ล่าง"])
-        is_full = "บนล่างโต๊ด" in line
-
         for n in numbers:
-            if len(n) == 2:
+            if len(price) == 1:
+                results.append(f"{n} {price[0]} 0 0")
+            elif len(price) == 2:
                 results.append(f"{n} {price[0]} {price[1]} 0")
-            else:
-                if len(price) == 3:
-                    results.append(f"{n} {price[0]} {price[1]} {price[2]}")
-                elif is_full:
-                    results.append(f"{n} {price[0]} {price[1]} {price[2]}")
-                elif is_lower and is_toe:
-                    results.append(f"{n} 0 {price[0]} {price[1]}")
-                elif is_onoff:
-                    results.append(f"{n} {price[0]} {price[1]} 0")
-                elif is_lower:
-                    results.append(f"{n} 0 {price[0]} 0")
-                elif is_toe:
-                    results.append(f"{n} {price[0]} 0 {price[1]}")
-                else:
-                    results.append(f"{n} {price[0]} 0 {price[1]}")
+            elif len(price) == 3:
+                results.append(f"{n} {price[0]} {price[1]} {price[2]}")
 
     return results
 
@@ -54,5 +45,9 @@ if st.button("Parse"):
     result = parse_order(text)
 
     st.subheader("ผลลัพธ์")
-    for r in result:
-        st.write(r)
+
+    if not result:
+        st.warning("ไม่มีข้อมูลที่ parse ได้")
+    else:
+        for r in result:
+            st.write(r)
