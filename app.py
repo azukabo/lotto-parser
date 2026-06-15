@@ -1,10 +1,8 @@
 import streamlit as st
 
+st.title("Lotto Parser")
+
+text = st.text_area("วางโพยที่นี่")
+
 if st.button("Parse"):
-    st.write("=== RAW INPUT ===")
-    st.write(text)
-
-    lines = [l.strip() for l in text.split("\n") if l.strip()]
-
-    st.write("=== LINES ===")
-    st.write(lines)
+    st.write(text.split("\n"))
